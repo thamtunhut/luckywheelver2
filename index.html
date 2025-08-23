@@ -349,6 +349,7 @@ function drawWheel() {
   });
 }
 
+// === CẬP NHẬT HÀM CHỌN GIẢI THƯỞNG ===
 function pickPrizeIndexByCount() {
   const availablePrizes = prizes.filter(p => p.count > 0);
   
@@ -519,6 +520,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById('toggle-controls-btn')?.addEventListener('click', toggleControlButtons);
 
+  // === CẬP NHẬT LOGIC NÚT HISTORY ===
   document.getElementById('download-history')?.addEventListener('click', () => {
     downloadHistoryAsCSV();
 
@@ -572,17 +574,7 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreHistoryFromLocalStorage(); 
 });
 
-// === THÊM LOGIC CHẶN LƯU/COPY ===
-// Chặn click chuột phải
-document.addEventListener('contextmenu', event => event.preventDefault());
-
 document.addEventListener("keydown", function (e) {
-  // Chặn F12 (Developer Tools) và Ctrl+S (Save)
-  if (e.key === "F12" || (e.ctrlKey && e.key === 's')) {
-    e.preventDefault();
-  }
-
-  // Logic cũ cho F1 và Space
   if (e.key === "F1") {
     e.preventDefault();
     toggleControlButtons();
@@ -602,7 +594,6 @@ document.addEventListener("keydown", function (e) {
     }
   }
 });
-
 
 window.addEventListener("beforeunload", function (e) {
   if (historyData.length > 0) {
