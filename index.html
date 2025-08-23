@@ -181,10 +181,15 @@
         border: 1px solid #ddd;
         border-radius: 0.5rem;
     }
+    .device-choice-container > div {
+        display: flex;
+        gap: 0.25rem;
+        align-items: center;
+    }
   </style>
 </head>
 <body>
-<audio id="spin-sound" src="https://cdn.jsdelivr.net/gh/huckbit/wheel-of-fortune@main/wheel_spin.mp3" preload="auto"></audio>
+<audio id="spin-sound" src="wheel_spin.mp3" preload="auto"></audio>
 
 <div class="container">
   <div id="setup" class="panel setup-panel">
@@ -230,8 +235,8 @@
       <button id="download-history" class="button control-btn">History</button>
       <button id="clear-history" class="button control-btn">Xóa lịch sử</button>
       <button id="setup-button" class="button control-btn">Setup</button>
-      <!-- NÚT FULLSCREEN ĐÃ ĐƯỢC DI CHUYỂN VÀO ĐÂY -->
-      <button id="fullscreen-btn" class="button control-btn" title="Toàn màn hình">🖥️</button>
+      <!-- === NÚT FULL SCREEN MỚI === -->
+      <button id="fullscreen-btn" class="button control-btn">Full screen</button>
       <button id="toggle-controls-btn" class="button" title="Ẩn/hiện các nút chức năng (Phím F1)">👁️</button>
     </div>
   </div>
@@ -500,45 +505,34 @@ function toggleControlButtons() {
     }
 }
 
+// === CÁC HÀM MỚI CHO FULL SCREEN ===
 function toggleFullScreen() {
-  if (!document.fullscreenElement &&    // Standard
-      !document.mozFullScreenElement && // Firefox
-      !document.webkitFullscreenElement && // Chrome, Safari and Opera
-      !document.msFullscreenElement) {  // IE/Edge
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen();
-    } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
-      document.documentElement.mozRequestFullScreen();
-    } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+    } else if (document.documentElement.webkitRequestFullscreen) { // Safari
       document.documentElement.webkitRequestFullscreen();
-    } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
-      document.documentElement.msRequestFullscreen();
     }
   } else {
     if (document.exitFullscreen) {
       document.exitFullscreen();
-    } else if (document.mozCancelFullScreen) { /* Firefox */
-      document.mozCancelFullScreen();
-    } else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+    } else if (document.webkitExitFullscreen) { // Safari
       document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) { /* IE/Edge */
-      document.msExitFullscreen();
     }
   }
 }
 
-function updateFullscreenIcon() {
+function updateFullscreenButton() {
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     if (!fullscreenBtn) return;
 
-    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
-        fullscreenBtn.innerHTML = '💻'; // Icon để thoát fullscreen
-        fullscreenBtn.title = 'Thoát toàn màn hình';
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        fullscreenBtn.textContent = 'Thoát Full screen';
     } else {
-        fullscreenBtn.innerHTML = '🖥️'; // Icon để vào fullscreen
-        fullscreenBtn.title = 'Toàn màn hình';
+        fullscreenBtn.textContent = 'Full screen';
     }
 }
+
 
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById('update-button')?.addEventListener('click', updateWheel);
@@ -553,10 +547,12 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById('ready-button')?.addEventListener('click', startGame);
   document.getElementById('start-button')?.addEventListener('click', spinWheel);
   document.getElementById('setup-button')?.addEventListener('click', backToSetup);
-
   document.getElementById('toggle-controls-btn')?.addEventListener('click', toggleControlButtons);
-
+  
+  // === THÊM SỰ KIỆN CHO NÚT FULL SCREEN ===
   document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullScreen);
+  document.addEventListener('fullscreenchange', updateFullscreenButton);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenButton); // For Safari
 
   document.getElementById('download-history')?.addEventListener('click', () => {
     downloadHistoryAsCSV();
@@ -611,12 +607,6 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreHistoryFromLocalStorage(); 
 });
 
-document.addEventListener('fullscreenchange', updateFullscreenIcon);
-document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
-document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
-document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
-
-// ĐÃ BỎ PHÍM TẮT F2
 document.addEventListener("keydown", function (e) {
   if (e.key === "F1") {
     e.preventDefault();
@@ -637,6 +627,7 @@ document.addEventListener("keydown", function (e) {
     }
   }
 });
+
 
 window.addEventListener("beforeunload", function (e) {
   if (historyData.length > 0) {
