@@ -235,8 +235,6 @@
       <button id="download-history" class="button control-btn">History</button>
       <button id="clear-history" class="button control-btn">Xóa lịch sử</button>
       <button id="setup-button" class="button control-btn">Setup</button>
-      <!-- === NÚT FULL SCREEN MỚI === -->
-      <button id="fullscreen-btn" class="button control-btn">Full screen</button>
       <button id="toggle-controls-btn" class="button" title="Ẩn/hiện các nút chức năng (Phím F1)">👁️</button>
     </div>
   </div>
@@ -505,35 +503,6 @@ function toggleControlButtons() {
     }
 }
 
-// === CÁC HÀM MỚI CHO FULL SCREEN ===
-function toggleFullScreen() {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen();
-    } else if (document.documentElement.webkitRequestFullscreen) { // Safari
-      document.documentElement.webkitRequestFullscreen();
-    }
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) { // Safari
-      document.webkitExitFullscreen();
-    }
-  }
-}
-
-function updateFullscreenButton() {
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    if (!fullscreenBtn) return;
-
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-        fullscreenBtn.textContent = 'Thoát Full screen';
-    } else {
-        fullscreenBtn.textContent = 'Full screen';
-    }
-}
-
-
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById('update-button')?.addEventListener('click', updateWheel);
   document.getElementById('bg-file')?.addEventListener('change', updateBackgroundFromFile);
@@ -547,12 +516,8 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById('ready-button')?.addEventListener('click', startGame);
   document.getElementById('start-button')?.addEventListener('click', spinWheel);
   document.getElementById('setup-button')?.addEventListener('click', backToSetup);
+
   document.getElementById('toggle-controls-btn')?.addEventListener('click', toggleControlButtons);
-  
-  // === THÊM SỰ KIỆN CHO NÚT FULL SCREEN ===
-  document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullScreen);
-  document.addEventListener('fullscreenchange', updateFullscreenButton);
-  document.addEventListener('webkitfullscreenchange', updateFullscreenButton); // For Safari
 
   document.getElementById('download-history')?.addEventListener('click', () => {
     downloadHistoryAsCSV();
@@ -607,7 +572,17 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreHistoryFromLocalStorage(); 
 });
 
+// === THÊM LOGIC CHẶN LƯU/COPY ===
+// Chặn click chuột phải
+document.addEventListener('contextmenu', event => event.preventDefault());
+
 document.addEventListener("keydown", function (e) {
+  // Chặn F12 (Developer Tools) và Ctrl+S (Save)
+  if (e.key === "F12" || (e.ctrlKey && e.key === 's')) {
+    e.preventDefault();
+  }
+
+  // Logic cũ cho F1 và Space
   if (e.key === "F1") {
     e.preventDefault();
     toggleControlButtons();
