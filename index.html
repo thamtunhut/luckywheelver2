@@ -172,6 +172,19 @@
         align-items: center;
         justify-content: center;
     }
+    #fullscreen-btn {
+        background-color: #6b7280;
+        flex-grow: 0;
+        flex-basis: 44px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 1.2rem;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
     .device-choice-container {
         display: flex;
         gap: 1rem;
@@ -235,6 +248,7 @@
       <button id="download-history" class="button control-btn">History</button>
       <button id="clear-history" class="button control-btn">Xóa lịch sử</button>
       <button id="setup-button" class="button control-btn">Setup</button>
+      <button id="fullscreen-btn" class="button" title="Toàn màn hình">⛶</button>
       <button id="toggle-controls-btn" class="button" title="Ẩn/hiện các nút chức năng (Phím F1)">👁️</button>
     </div>
   </div>
@@ -249,6 +263,95 @@ let historyData = [];
 let spinSound;
 let showZeroQuantityPrizes = false;
 let showControlButtons = true;
+
+function prizesToInputText(prizeList) {
+  return prizeList.map(p => {
+    const parts = [p.label, p.count, p.weight];
+    if (p.customColor) parts.push(p.customColor);
+    return parts.join('|');
+  }).join('\n');
+}
+
+function saveAppState() {
+  const isPlaying = document.getElementById('play').style.display === 'flex';
+  const state = {
+    panel: isPlaying ? 'play' : 'setup',
+    prizeInput: document.getElementById('prize-input').value,
+    prizes: prizes,
+    lastRotation: lastRotation,
+    deviceMode: document.getElementById('mode-pc').checked ? 'pc' : 'mobile',
+    showZeroQuantity: showZeroQuantityPrizes,
+    showControls: showControlButtons
+  };
+  localStorage.setItem('app_state', JSON.stringify(state));
+}
+
+function restoreAppState() {
+  const stateJson = localStorage.getItem('app_state');
+  if (!stateJson) { updateWheel(); return; }
+
+  let state;
+  try { state = JSON.parse(stateJson); } catch (e) { updateWheel(); return; }
+
+  if (state.prizeInput) {
+    document.getElementById('prize-input').value = state.prizeInput;
+  }
+  if (state.deviceMode === 'pc') {
+    document.getElementById('mode-pc').checked = true;
+  } else {
+    document.getElementById('mode-mobile').checked = true;
+  }
+  if (state.showZeroQuantity !== undefined) {
+    showZeroQuantityPrizes = !!state.showZeroQuantity;
+    document.getElementById('show-zero-quantity').checked = !!state.showZeroQuantity;
+  }
+
+  if (state.panel === 'play' && state.prizes && state.prizes.length > 0) {
+    prizes = state.prizes;
+    lastRotation = state.lastRotation || 0;
+
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('play').style.display = 'flex';
+
+    const isPCMode = state.deviceMode === 'pc';
+    const toggleBtn = document.getElementById('toggle-controls-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (isPCMode) {
+      toggleBtn.style.display = 'none';
+      if (fullscreenBtn) fullscreenBtn.style.display = 'none';
+    } else {
+      toggleBtn.style.display = 'flex';
+      if (fullscreenBtn) fullscreenBtn.style.display = 'flex';
+    }
+
+    if (state.showControls === false) {
+      showControlButtons = false;
+      document.querySelectorAll('.control-btn').forEach(btn => { btn.style.display = 'none'; });
+      const tb = document.getElementById('toggle-controls-btn');
+      if (tb) tb.textContent = '🙈';
+    }
+
+    drawWheel();
+
+    const wheel = document.getElementById('wheel');
+    wheel.style.transition = 'none';
+    wheel.style.transform = `rotate(${lastRotation}deg)`;
+
+    restoreHistoryFromLocalStorage();
+  } else {
+    updateWheel();
+  }
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error('Lỗi fullscreen:', err);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+}
 
 function saveHistoryToLocalStorage() {
   if (historyData.length === 0) return;
@@ -454,6 +557,7 @@ function spinWheel() {
     }
 
     spinning = false;
+    saveAppState();
   }, durationMs + 100);
 }
 
@@ -473,20 +577,26 @@ function startGame() {
 
   document.getElementById('setup').style.display = 'none';
   document.getElementById('play').style.display = 'flex';
-  
+
   const toggleBtn = document.getElementById('toggle-controls-btn');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
   if (isPCMode) {
     toggleBtn.style.display = 'none';
+    fullscreenBtn.style.display = 'none';
   } else {
     toggleBtn.style.display = 'flex';
+    fullscreenBtn.style.display = 'flex';
   }
-  
+
   updateWheel();
+  saveAppState();
 }
 
 function backToSetup() {
+  document.getElementById('prize-input').value = prizesToInputText(prizes);
   document.getElementById('play').style.display = 'none';
   document.getElementById('setup').style.display = 'flex';
+  saveAppState();
 }
 
 function toggleControlButtons() {
@@ -568,8 +678,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
   spinSound = document.getElementById("spin-sound");
 
-  updateWheel();
-  restoreHistoryFromLocalStorage(); 
+  document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('fullscreen-btn');
+    if (btn) btn.textContent = document.fullscreenElement ? '⊡' : '⛶';
+  });
+
+  restoreAppState();
 });
 
 // === THÊM LOGIC CHẶN LƯU/COPY ===
