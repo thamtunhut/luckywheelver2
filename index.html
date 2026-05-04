@@ -88,12 +88,13 @@
     }
     .wheel {
       width: 85vw;
-      max-width: 420px; 
+      max-width: 420px;
       aspect-ratio: 1 / 1;
-      border: 4px solid #ccc;
+      box-shadow: 0 0 0 4px #ccc;
       border-radius: 50%;
       overflow: hidden;
       position: relative;
+      transform: translateZ(0);
     }
     .start-button {
       position: absolute;
@@ -172,19 +173,6 @@
         align-items: center;
         justify-content: center;
     }
-    #fullscreen-btn {
-        background-color: #6b7280;
-        flex-grow: 0;
-        flex-basis: 44px;
-        width: 44px;
-        height: 44px;
-        padding: 0;
-        border-radius: 50%;
-        font-size: 1.2rem;
-        display: none;
-        align-items: center;
-        justify-content: center;
-    }
     .device-choice-container {
         display: flex;
         gap: 1rem;
@@ -248,7 +236,6 @@
       <button id="download-history" class="button control-btn">History</button>
       <button id="clear-history" class="button control-btn">Xóa lịch sử</button>
       <button id="setup-button" class="button control-btn">Setup</button>
-      <button id="fullscreen-btn" class="button" title="Toàn màn hình">⛶</button>
       <button id="toggle-controls-btn" class="button" title="Ẩn/hiện các nút chức năng (Phím F1)">👁️</button>
     </div>
   </div>
@@ -315,13 +302,10 @@ function restoreAppState() {
 
     const isPCMode = state.deviceMode === 'pc';
     const toggleBtn = document.getElementById('toggle-controls-btn');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
     if (isPCMode) {
       toggleBtn.style.display = 'none';
-      if (fullscreenBtn) fullscreenBtn.style.display = 'none';
     } else {
       toggleBtn.style.display = 'flex';
-      if (fullscreenBtn) fullscreenBtn.style.display = 'flex';
     }
 
     if (state.showControls === false) {
@@ -340,16 +324,6 @@ function restoreAppState() {
     restoreHistoryFromLocalStorage();
   } else {
     updateWheel();
-  }
-}
-
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(err => {
-      console.error('Lỗi fullscreen:', err);
-    });
-  } else {
-    document.exitFullscreen();
   }
 }
 
@@ -579,13 +553,10 @@ function startGame() {
   document.getElementById('play').style.display = 'flex';
 
   const toggleBtn = document.getElementById('toggle-controls-btn');
-  const fullscreenBtn = document.getElementById('fullscreen-btn');
   if (isPCMode) {
     toggleBtn.style.display = 'none';
-    fullscreenBtn.style.display = 'none';
   } else {
     toggleBtn.style.display = 'flex';
-    fullscreenBtn.style.display = 'flex';
   }
 
   updateWheel();
@@ -677,12 +648,6 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   spinSound = document.getElementById("spin-sound");
-
-  document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
-  document.addEventListener('fullscreenchange', () => {
-    const btn = document.getElementById('fullscreen-btn');
-    if (btn) btn.textContent = document.fullscreenElement ? '⊡' : '⛶';
-  });
 
   restoreAppState();
 });
