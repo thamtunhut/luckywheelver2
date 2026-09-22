@@ -668,8 +668,19 @@ document.addEventListener("keydown", function (e) {
     e.preventDefault();
     toggleControlButtons();
   }
+  // Các phím chức năng/điều hướng không được dùng để bắt đầu quay
+  const nonSpinKeys = [
+    "Escape", "Tab", "Shift", "Control", "Alt", "Meta", "OS", "CapsLock",
+    "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+    "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown",
+    "ContextMenu", "PrintScreen", "ScrollLock", "Pause", "NumLock"
+  ];
+  const isFunctionKey = /^F\d{1,2}$/.test(e.key);
+
   if (
-    (e.code === "Space" || e.key === " ") &&
+    !isFunctionKey &&
+    !nonSpinKeys.includes(e.key) &&
+    !e.ctrlKey && !e.altKey && !e.metaKey &&
     document.getElementById("play").style.display === "flex"
   ) {
     const active = document.activeElement;
