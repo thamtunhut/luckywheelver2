@@ -95,6 +95,7 @@
       overflow: hidden;
       position: relative;
       transform: translateZ(0);
+      will-change: transform;
     }
     .start-button {
       position: absolute;
@@ -321,6 +322,8 @@ function restoreAppState() {
     const wheel = document.getElementById('wheel');
     wheel.style.transition = 'none';
     wheel.style.transform = `rotate(${lastRotation}deg)`;
+    warmUpWheel();
+    warmUpAudio();
 
     restoreHistoryFromLocalStorage();
   } else {
@@ -425,6 +428,39 @@ function drawWheel() {
     text.textContent = p.label;
     svg.appendChild(text);
   });
+}
+
+// Làm nóng layer transform + decode âm thanh trước, để lần quay đầu tiên
+// không bị khựng do trình duyệt phải khởi tạo các tài nguyên này giữa chừng.
+function warmUpWheel() {
+  const wheel = document.getElementById('wheel');
+  if (!wheel || wheel.dataset.warmed) return;
+  wheel.dataset.warmed = '1';
+  const baseRotation = lastRotation;
+  requestAnimationFrame(() => {
+    wheel.style.transition = 'transform 0.01s linear';
+    wheel.style.transform = `rotate(${baseRotation + 0.01}deg)`;
+    requestAnimationFrame(() => {
+      wheel.style.transition = 'none';
+      wheel.style.transform = `rotate(${baseRotation}deg)`;
+    });
+  });
+}
+
+function warmUpAudio() {
+  if (!spinSound) return;
+  const originalVolume = spinSound.volume;
+  spinSound.volume = 0;
+  const playPromise = spinSound.play();
+  if (playPromise && playPromise.then) {
+    playPromise.then(() => {
+      spinSound.pause();
+      spinSound.currentTime = 0;
+      spinSound.volume = originalVolume;
+    }).catch(() => {
+      spinSound.volume = originalVolume;
+    });
+  }
 }
 
 function pickPrizeIndexByCount() {
@@ -561,6 +597,8 @@ function startGame() {
   }
 
   updateWheel();
+  warmUpWheel();
+  warmUpAudio();
   saveAppState();
 }
 
