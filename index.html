@@ -106,9 +106,16 @@
       font-size: 1.2rem;
       padding: 0.8rem 1.2rem;
     }
+    .result-slot {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 3.7rem;
+      margin-top: 1rem;
+    }
     .result {
       display: inline-block;
-      margin-top: 1rem;
       font-size: 1.1rem;
       font-weight: bold;
       color: #ef4444;
@@ -119,6 +126,12 @@
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
       max-width: 90vw;
       white-space: pre-line;
+    }
+    .result:empty {
+      visibility: hidden;
+    }
+    #history-list {
+      min-height: 1.4em;
     }
     #history {
       margin-top: 1rem;
@@ -231,7 +244,7 @@
       </div>
       <button class="button start-button" id="start-button">Quay</button>
     </div>
-    <div class="result" id="result"></div>
+    <div class="result-slot"><div class="result" id="result"></div></div>
     <div id="history"><strong>Lịch sử trúng thưởng:</strong><ul id="history-list"></ul></div>
     
     <div class="control-buttons-row">
@@ -388,6 +401,40 @@ function updateWheel() {
   drawWheel();
 }
 
+const LABEL_R_OUT = 94;
+const LABEL_R_IN = 34;
+const LABEL_MAX_FONT = 12;
+const LABEL_MIN_FONT = 3;
+const labelMeasureCtx = document.createElement("canvas").getContext("2d");
+
+function measureLabel10(label) {
+  labelMeasureCtx.font = "bold 10px sans-serif";
+  return labelMeasureCtx.measureText(label).width * 1.05;
+}
+
+// Chữ chạy dọc bán kính nên bị giới hạn bởi 2 thứ: chiều dài khả dụng (R_OUT - R_IN)
+// và bề rộng ô tại đầu trong của chữ (ô hẹp dần về tâm). Giải ra cỡ chữ lớn nhất thỏa cả hai.
+function fitLabelToSlice(label, sliceDeg) {
+  const lenAvail = LABEL_R_OUT - LABEL_R_IN;
+  const k = 1.7 * Math.tan((Math.min(sliceDeg / 2, 45) * Math.PI) / 180);
+  let text = label;
+  let w10 = measureLabel10(text);
+  let size = Math.min(
+    LABEL_MAX_FONT,
+    (10 * lenAvail) / w10,
+    (LABEL_R_OUT * k) / (1 + (k * w10) / 10)
+  );
+
+  if (size < LABEL_MIN_FONT) {
+    size = LABEL_MIN_FONT;
+    while (text.length > 1 && (measureLabel10(text + "…") * size) / 10 > lenAvail) {
+      text = text.slice(0, -1);
+    }
+    if (text !== label) text += "…";
+  }
+  return { text, size: Math.round(size * 100) / 100 };
+}
+
 function drawWheel() {
   const svg = document.getElementById("wheel-svg");
   if (!svg) return;
@@ -413,19 +460,19 @@ function drawWheel() {
     svg.appendChild(path);
 
     const ta = s + slice / 2;
-    const tx = 100 + 60 * Math.cos(((ta - 90) * Math.PI) / 180);
-    const ty = 100 + 60 * Math.sin(((ta - 90) * Math.PI) / 180);
+    const fit = fitLabelToSlice(p.label, slice);
+    const tx = 100 + LABEL_R_OUT * Math.cos(((ta - 90) * Math.PI) / 180);
+    const ty = 100 + LABEL_R_OUT * Math.sin(((ta - 90) * Math.PI) / 180);
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", tx);
     text.setAttribute("y", ty);
     text.setAttribute("fill", "white");
-    const fontSize = prizesToDraw.length > 10 ? 8 : 10;
-    text.setAttribute("font-size", fontSize);
+    text.setAttribute("font-size", fit.size);
     text.setAttribute("font-weight", "bold");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("alignment-baseline", "middle");
-    text.setAttribute("transform", `rotate(${ta}, ${tx}, ${ty})`);
-    text.textContent = p.label;
+    text.setAttribute("text-anchor", "end");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("transform", `rotate(${ta - 90}, ${tx}, ${ty})`);
+    text.textContent = fit.text;
     svg.appendChild(text);
   });
 }
