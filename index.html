@@ -68,7 +68,7 @@
     }
     .wheel-container {
       position: relative;
-      margin-top: 1rem;
+      margin-top: 2.5rem;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -76,15 +76,19 @@
     }
     .arrow-top {
       position: absolute;
-      top: -25px;
+      top: -40px;
       left: 50%;
-      transform: translateX(-50%) rotate(180deg);
-      width: 0;
-      height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-      border-bottom: 25px solid red;
+      transform: translateX(-50%);
+      width: 44px;
+      height: 52px;
       z-index: 10;
+      pointer-events: none;
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+    }
+    .arrow-top svg {
+      display: block;
+      width: 100%;
+      height: 100%;
     }
     .wheel {
       width: 85vw;
@@ -238,7 +242,12 @@
   <div id="play" class="panel play-panel">
     <canvas class="confetti" id="confetti"></canvas>
     <div class="wheel-container">
-      <div class="arrow-top"></div>
+      <div class="arrow-top">
+        <svg viewBox="0 0 44 52" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5,5 H39 L22,48 Z" fill="none" stroke="rgba(17,24,39,0.85)" stroke-width="7" stroke-linejoin="round"/>
+          <path class="arrow-fill" d="M5,5 H39 L22,48 Z" fill="#e60000" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <div class="wheel" id="wheel">
         <svg id="wheel-svg" viewBox="0 0 200 200" width="100%" height="100%"></svg>
       </div>
@@ -439,10 +448,14 @@ function drawWheel() {
   const svg = document.getElementById("wheel-svg");
   if (!svg) return;
   svg.innerHTML = "";
-  
+  wheelSliceColors = [];
+
   const prizesToDraw = showZeroQuantityPrizes ? prizes : prizes.filter(p => p.count > 0);
 
-  if (prizesToDraw.length === 0) return;
+  if (prizesToDraw.length === 0) {
+    updateArrowColor(lastRotation);
+    return;
+  }
 
   const slice = 360 / prizesToDraw.length;
   prizesToDraw.forEach((p, i) => {
@@ -458,6 +471,7 @@ function drawWheel() {
     path.setAttribute("d", `M100,100 L${x1},${y1} A100,100 0 ${laf} 1 ${x2},${y2} Z`);
     path.setAttribute("fill", color);
     svg.appendChild(path);
+    wheelSliceColors.push(color);
 
     const ta = s + slice / 2;
     const fit = fitLabelToSlice(p.label, slice);
@@ -475,6 +489,39 @@ function drawWheel() {
     text.textContent = fit.text;
     svg.appendChild(text);
   });
+
+  updateArrowColor(lastRotation);
+}
+
+let wheelSliceColors = [];
+const DEFAULT_ARROW_COLOR = "#e60000";
+
+// Ô i trải từ i*slice đến (i+1)*slice (tính theo chiều kim đồng hồ từ đỉnh); vòng quay
+// xoay rotationDeg thì điểm đang nằm dưới mũi tên (ở đỉnh) vốn thuộc góc -rotationDeg.
+function updateArrowColor(rotationDeg) {
+  const fillEl = document.querySelector(".arrow-top .arrow-fill");
+  if (!fillEl) return;
+  const n = wheelSliceColors.length;
+  if (n === 0) {
+    fillEl.style.fill = DEFAULT_ARROW_COLOR;
+    return;
+  }
+  const angle = (((360 - (rotationDeg % 360)) % 360) + 360) % 360;
+  const idx = Math.min(Math.floor(angle / (360 / n)), n - 1);
+  fillEl.style.fill = wheelSliceColors[idx];
+}
+
+function getWheelRotation() {
+  const tf = getComputedStyle(document.getElementById("wheel")).transform;
+  if (!tf || tf === "none") return 0;
+  const m = tf.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi).map(Number);
+  return (Math.atan2(m[1], m[0]) * 180) / Math.PI;
+}
+
+function trackArrowColorWhileSpinning(arrow) {
+  if (!arrow.classList.contains("spinning")) return;
+  updateArrowColor(getWheelRotation());
+  requestAnimationFrame(() => trackArrowColorWhileSpinning(arrow));
 }
 
 // Làm nóng layer transform + decode âm thanh trước, để lần quay đầu tiên
@@ -501,8 +548,10 @@ function warmUpAudio() {
   const playPromise = spinSound.play();
   if (playPromise && playPromise.then) {
     playPromise.then(() => {
-      spinSound.pause();
-      spinSound.currentTime = 0;
+      if (!spinning) {
+        spinSound.pause();
+        spinSound.currentTime = 0;
+      }
       spinSound.volume = originalVolume;
     }).catch(() => {
       spinSound.volume = originalVolume;
@@ -548,13 +597,23 @@ function spinWheel() {
   }
 
   spinning = true;
+  const arrow = document.querySelector(".arrow-top");
+  arrow.classList.add("spinning");
   const wheel = document.getElementById("wheel");
+  // Lần quay đầu chưa có transform inline thì CSS (translateZ -> rotate) nội suy bằng ma trận,
+  // vòng chỉ nhích vài chục độ thay vì xoay nhiều vòng. Gán rotate trước để nội suy theo góc.
+  if (!wheel.style.transform) {
+    wheel.style.transition = "none";
+    wheel.style.transform = `rotate(${lastRotation}deg)`;
+    void wheel.offsetWidth;
+  }
   const resultBox = document.getElementById("result");
   resultBox.textContent = "";
   
   const prizesForSpinCalculation = showZeroQuantityPrizes ? prizes : prizes.filter(p => p.count > 0);
   if (prizesForSpinCalculation.length === 0) {
     alert("Không có giải thưởng nào hiển thị trên vòng quay!");
+    arrow.classList.remove("spinning");
     spinning = false;
     return;
   }
@@ -578,13 +637,16 @@ function spinWheel() {
   const durationMs = durationSec * 1000;
   wheel.style.transition = `transform ${durationSec}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
   wheel.style.transform = `rotate(${lastRotation}deg)`;
+  trackArrowColorWhileSpinning(arrow);
 
   if (spinSound) {
+    spinSound.volume = 1;
     spinSound.currentTime = 0;
     spinSound.play().catch(e => console.error("Lỗi khi phát âm thanh:", e));
   }
 
   setTimeout(() => {
+    arrow.classList.remove("spinning");
     if (spinSound) {
       spinSound.pause();
       spinSound.currentTime = 0;
